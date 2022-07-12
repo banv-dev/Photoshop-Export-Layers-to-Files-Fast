@@ -427,17 +427,32 @@ var layerCount = 0;
 var visibleLayerCount = 0;
 var selectedLayerCount = 0;
 
+var logFile;
+
+function debug(message) {
+    if (!logFile) {
+        logFile = new File(env.scriptFileDirectory  + "/debug.log")
+        logFile.open("a");
+    }
+
+    logFile.writeln(message)
+}
+
 //
 // Entry point
 //
 
-bootstrap();
+bootstrap(arguments[0]);
 
 //
 // Processing logic
 //
 
-function main() {
+function main(filePath) {
+
+    debug("start script at: " + Date());
+    debug("input file: " + filePath);
+
     // user preferences
     prefs = new Object();
     prefs = getSettings();
@@ -1811,7 +1826,7 @@ function getSettings(formatOpts) {
 // Bootstrapper (version support, getting additional environment settings, error handling...)
 //
 
-function bootstrap() {
+function bootstrap(filePath) {
     function showError(err) {
         alert(err + ': on line ' + err.line, 'Script Error', true);
     }
@@ -1819,16 +1834,27 @@ function bootstrap() {
     // initialisation of class methods
     defineProfilerMethods();
 
+    var doc;
+
+    if (filePath) {
+        var fileRef = File(filePath);
+        doc = app.open(fileRef);
+        app.activeDocument = doc;
+    }
+
+
     // check if there's a document open
     try {
-        var doc = app.activeDocument; // this actually triggers the exception
-        if (!doc) { // this is just for sure if it ever behaves differently in other versions
+        doc = app.activeDocument; // this actually triggers the exception
+        if (!filePath && !doc) { // this is just for sure if it ever behaves differently in other versions
             throw new Error();
         }
     } catch (e) {
         alert("No document is open! Nothing to export.", "Error", true);
         return "cancel";
     }
+
+   
 
     try {
         // setup the environment
@@ -1862,9 +1888,9 @@ function bootstrap() {
         // run the script itself
         if (env.cs3OrHigher) {
             // suspend history for CS3 or higher
-            app.activeDocument.suspendHistory('Export Layers To Files', 'main()');
+            app.activeDocument.suspendHistory('Export Layers To Files', 'main(filePath)');
         } else {
-            main();
+            main(filePath);
         }
 
         if (env.documentCopy) {
